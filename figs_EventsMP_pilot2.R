@@ -22,14 +22,18 @@ library(stringr)
 # Add in the contrast and ROI names so it's not just numbers!!!!! (This ordering comes from the 
 # standard ordering produced by the 2nd level analyses; we'll arrange differently in the plots)
 
-myResults = read.csv('loc_langloc_crit_eventsMP_20171218.csv', 
+# PL2017 doesn't know the names of the MD fROIs, add them
+MD_names <- read.csv('MD_fROI_names.csv')
+
+
+allSigChange = read.csv('loc_langloc_crit_eventsMP_20171218.csv', 
                      colClasses = c("factor","factor", "factor","numeric","numeric")) %>%
   mutate(Localizer = 'langlocSN') %>%
   mutate(ROISystem = 'LHLang') %>%
   mutate(TaskCrit = 'EventsMP')
   
 
-allSigChange = read.csv('loc_langloc_crit_langloc_20171218.csv', 
+myResults = read.csv('loc_langloc_crit_langloc_20171218.csv', 
                         colClasses = c("factor","factor", "factor","numeric","numeric")) %>%
   mutate(Localizer = 'langlocSN') %>%
   mutate(ROISystem = 'LHLang') %>%
@@ -37,27 +41,35 @@ allSigChange = read.csv('loc_langloc_crit_langloc_20171218.csv',
 
 allSigChange = rbind(allSigChange, myResults)
 
-allSigChange = read.csv('loc_mdloc_crit_mdloc_20171230.csv', 
+myResults = read.csv('loc_mdloc_crit_mdloc_20171230.csv', 
                         colClasses = c("factor","factor", "factor","numeric","numeric")) %>%
   mutate(Localizer = 'spatialFIN') %>%
   mutate(ROISystem = 'MD_all') %>%
-  mutate(TaskCrit = 'spatialFIN')
+  mutate(TaskCrit = 'spatialFIN') %>%
+  mutate(ROI_Num = ROIName) %>%
+  select(-ROIName) %>%
+  merge(MD_names, by=c('ROI_Num'), all.x=TRUE) %>%
+  select(-ROI_Num)
 
 allSigChange = rbind(allSigChange, myResults)
 
-allSigChange = read.csv('loc_mdloc_crit_eventsMP_20171230.csv', 
+myResults = read.csv('loc_mdloc_crit_eventsMP_20171230.csv', 
                         colClasses = c("factor","factor", "factor","numeric","numeric")) %>%
   mutate(Localizer = 'spatialFIN') %>%
   mutate(ROISystem = 'MD_all') %>%
-  mutate(TaskCrit = 'EventsMP')
+  mutate(TaskCrit = 'EventsMP') %>%
+  mutate(ROI_Num = ROIName) %>%
+  select(-ROIName) %>%
+  merge(MD_names, by=c('ROI_Num'), all.x=TRUE) %>%
+  select(-ROI_Num)
 
-allSigChange = rbind(allSigChange, myResults)
+allSigChange = rbind(allSigChange, myResults) %>%
+  arrange(Subject)
 
 
 #########
 # TRANSFORMATIONS
 #########
-
 
 avgSigChange = allSigChange %>%
   group_by(Subject,Contrast,ROISystem,Localizer,TaskCrit) %>%
@@ -99,7 +111,11 @@ toGraph <- allSigChange %>%
 
 
 #Force some factor orderings here, they are finicky!  
-toGraph$ROIName <- factor(toGraph$ROIName, levels = c("LIFGorb",
+toGraph$ROIGroup <- factor(toGraph$ROIGroup, levels = c("across ROIs",
+                                                        "individual ROIs"))
+
+Lang_toGraph <- filter(toGraph, Localizer == 'langlocSN')
+Lang_toGraph$ROIName <- factor(Lang_toGraph$ROIName, levels = c("LIFGorb",
                                                       "LIFG",
                                                       "LMFG",
                                                       "LAntTemp",
@@ -107,11 +123,17 @@ toGraph$ROIName <- factor(toGraph$ROIName, levels = c("LIFGorb",
                                                       "LAngG",
                                                       "Localizer Average"))
 
-toGraph$ROIGroup <- factor(toGraph$ROIGroup, levels = c("across ROIs",
-                                                        "individual ROIs"))
-
-toGraph <- toGraph %>%
-  arrange(ROIGroup, ROIName)
+MD_toGraph <- filter(toGraph, Localizer == 'spatialFIN')
+MD_toGraph$ROIName <- factor(MD_toGraph$ROIName, levels=c ('LIFG op',  'RIFG op', 
+                                                           'LMFG',    'RMFG',    
+                                                           'LMFG orb','RMFG orb', 
+                                                           'LPrecG', 'RPrecG',  
+                                                           'LInsula', 'RInsula',
+                                                           'LSMA',    'RSMA',   
+                                                           'LPar Inf', 'RPar Inf', 
+                                                           'LPar Sup', 'RPar Sup', 
+                                                           'LACC',   'RACC',
+                                                           'Localizer Average'))
 #########
 # Graphs!
 #########
@@ -123,21 +145,42 @@ figdir = paste(getwd(),'figs')
 setwd(figdir)
 
 #Subset and rename for language localiser
-LangLoc_LangCrit <- filter(toGraph, Localizer =='langlocSN',TaskCrit =='langlocSN') %>%
+LangLoc_LangCrit <- filter(Lang_toGraph, Localizer =='langlocSN',TaskCrit =='langlocSN') %>%
   filter(Contrast %in% c('S','N'))
-LangLoc_EvCrit <- filter(toGraph, Localizer =='langlocSN',TaskCrit =='EventsMP') %>%
+LangLoc_EvCrit <- filter(Lang_toGraph, Localizer =='langlocSN',TaskCrit =='EventsMP') %>%
+  filter(Contrast %in% c("Cont","DiffAll","SameAll","SameMan","SamePath","SameAg"))
+
+#Subset and rename for MD localizer
+
+MDLoc_MDCrit <- filter(MD_toGraph, Localizer =='spatialFIN',TaskCrit =='spatialFIN') %>%
+  filter(Contrast %in% c('H','E'))
+MDLoc_EvCrit <- filter(MD_toGraph, Localizer =='spatialFIN',TaskCrit =='EventsMP') %>%
   filter(Contrast %in% c("Cont","DiffAll","SameAll","SameMan","SamePath","SameAg"))
 
 #More factor reordering
 LangLoc_LangCrit$Contrast <- factor(LangLoc_LangCrit$Contrast, levels = c("S","N"))
-LangLoc_LangCrit <- LangLoc_LangCrit %>%
-  arrange(ROIGroup, ROIName, Contrast)
+
 
 LangLoc_EvCrit$Contrast <- factor(LangLoc_EvCrit$Contrast, levels = c("DiffAll","SameMan",
                                                                       "SamePath","SameAg",
                                                                       "SameAll","Cont"))
+
+MDLoc_MDCrit$Contrast <- factor(MDLoc_MDCrit$Contrast, levels = c("H","E"))
+
+
+MDLoc_EvCrit$Contrast <- factor(MDLoc_EvCrit$Contrast, levels = c("DiffAll","SameMan",
+                                                                      "SamePath","SameAg",
+                                                                      "SameAll","Cont"))
+
 LangLoc_EvCrit <- LangLoc_EvCrit %>%
   arrange(ROIGroup, ROIName, Contrast)
+LangLoc_LangCrit <- LangLoc_LangCrit %>%
+  arrange(ROIGroup, ROIName, Contrast)
+MDLoc_EvCrit <- MDLoc_EvCrit %>%
+  arrange(ROIGroup, ROIName, Contrast)
+MDLoc_MDCrit <- MDLoc_MDCrit %>%
+  arrange(ROIGroup, ROIName, Contrast)
+
 #Graphing function!
 
 makeBar = function(plotData, fileName = 'TEST NAME', ylow=-0.5,yhigh=2.5, mycolors = c("gray35", "gray60")) {
@@ -169,7 +212,8 @@ ggplot(data=plotData, aes(x=ROIName, y=meanSig, fill=Contrast)) +
 
 makeBar(LangLoc_LangCrit, 'LangLoc_LangCrit')
 makeBar(LangLoc_EvCrit, 'LangLoc_EventsMPCrit', yhigh=1)
-
+makeBar(MDLoc_MDCrit, 'MDLoc_MDCrit', yhigh=5)
+makeBar(MDLoc_EvCrit, 'MDLoc_EventsMPCrit', yhigh=1)
 
 
 #Old Code from when results came in with just ROI numbering.
