@@ -37,6 +37,22 @@ allSigChange = read.csv('loc_langloc_crit_langloc_20171218.csv',
 
 allSigChange = rbind(allSigChange, myResults)
 
+allSigChange = read.csv('loc_mdloc_crit_mdloc_20171230.csv', 
+                        colClasses = c("factor","factor", "factor","numeric","numeric")) %>%
+  mutate(Localizer = 'spatialFIN') %>%
+  mutate(ROISystem = 'MD_all') %>%
+  mutate(TaskCrit = 'spatialFIN')
+
+allSigChange = rbind(allSigChange, myResults)
+
+allSigChange = read.csv('loc_mdloc_crit_eventsMP_20171230.csv', 
+                        colClasses = c("factor","factor", "factor","numeric","numeric")) %>%
+  mutate(Localizer = 'spatialFIN') %>%
+  mutate(ROISystem = 'MD_all') %>%
+  mutate(TaskCrit = 'EventsMP')
+
+allSigChange = rbind(allSigChange, myResults)
+
 
 #########
 # TRANSFORMATIONS

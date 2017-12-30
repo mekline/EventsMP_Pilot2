@@ -7,9 +7,9 @@
 
 ####
 #Stuff to change!
-myResultsFolder = paste(getwd(),'/loc_langloc_crit_eventsMP_20171218',sep='')
+myResultsFolder = paste(getwd(),'/loc_mdloc_crit_mdloc_20171230',sep='')
 myOutputFolder = getwd()
-myFilename = 'loc_langloc_crit_eventsMP_20171218.csv'
+myFilename = 'loc_mdloc_crit_mdloc_20171230.csv'
 toSave = 1
 
 #(Resulting data struct stored in variable myfile, to use directory)
